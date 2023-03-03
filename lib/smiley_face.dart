@@ -340,7 +340,7 @@ class EyesBall extends StatelessWidget {
       child: Transform.translate(
           offset: Offset(x, y),
           child: CustomPaint(
-            painter: Pointer(5),
+            painter: Pointer(7),
           )),
     );
   }
@@ -409,6 +409,13 @@ class Pointer extends CustomPainter {
     canvas.drawCircle(
       Offset(size.width / 2, size.height / 2),
       radius,
+      Paint()
+        ..color = Colors.white
+        ..blendMode = BlendMode.difference,
+    );
+    canvas.drawCircle(
+      Offset(size.width / 2, size.height / 2 + 5),
+      2,
       Paint()
         ..color = Colors.white
         ..blendMode = BlendMode.difference,
