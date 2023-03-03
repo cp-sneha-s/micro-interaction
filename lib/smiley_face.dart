@@ -200,18 +200,17 @@ class _SmileyFaceState extends State<SmileyFace>
   double pointerY = 0.0;
   late final AnimationController pointerSizeController;
   late final Animation pointerAnimation;
+  double eyeballPositionX = 0.0;
+  double eyeballPositionY = 0.0;
 
   @override
   void initState() {
-    pointerSizeController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 300));
-    pointerAnimation = CurvedAnimation(
-        curve: Curves.easeInOutCubic,
-        parent: Tween<double>(begin: 0, end: 1).animate(pointerSizeController));
     super.initState();
   }
 
   void updateLocation(PointerEvent event) {
+    final mediaX = MediaQuery.of(context).size.width;
+    final mediaY = MediaQuery.of(context).size.height;
     setState(() {
       x = event.position.dx;
       y = event.position.dy;
@@ -222,37 +221,25 @@ class _SmileyFaceState extends State<SmileyFace>
     final eyeballSize = renderBox.size;
     final eyeballOffset = renderBox.localToGlobal(Offset.zero);
 
-    final mediaX = MediaQuery.of(context).size.width;
-    final mediaY = MediaQuery.of(context).size.height;
-
-    print('total size of screen in X axis: $mediaX');
-    print('total size of screen in Y axis: $mediaY');
-
-    // print('Eyeball Offset XX Axis: ${eyeballOffset.dx}');
-    // print('Eyeball Offset YY Axis: ${eyeballOffset.dy}');
-    //
-    // print(
-    //     'Position: ${(eyeballOffset.dx + eyeballSize.width) / 2}, ${(eyeballOffset.dy + eyeballSize.height) / 2}');
-
-    print('X axis : $x');
-    print('Y Axis: $y');
-
     final percentPositionX = 40 * 100 / mediaX;
     final percentPositionY = 40 * 100 / mediaY;
 
     double finalX = percentPositionX * x / 100;
     double finalY = percentPositionY * y / 100;
 
-    print('Final Position of X Axis: $finalX');
-    print('Final Position of Y Axis: $finalY');
+    eyeballPositionX = (eyeballOffset.dx + eyeballSize.width) / 2;
+    eyeballPositionY = (eyeballOffset.dy + eyeballSize.height) / 2;
+    final dx = x - eyeballPositionX;
+    final dy = y - eyeballPositionY;
+    final angle = atan2(dy, dx);
 
-    final posiotionX = (eyeballOffset.dx + eyeballSize.width) / 2;
-    final positionY = (eyeballOffset.dy + eyeballSize.height) / 2;
+    // calculate the offset of the pointer based on the angle and the maximum offset
+    final offset = min(sqrt(dx * dx + dy * dy), 20);
+    final offsetX = offset * cos(angle);
+    final offsetY = offset * sin(angle);
 
-    pointerX = finalX - 20;
-    pointerY = finalY - 20;
-
-    bool isDotInside = pow(pointerX, 2) + pow(pointerY, 2) < pow(20, 2);
+    pointerX = finalX > offsetX ? offsetX : finalX;
+    pointerY = finalY > offsetY ? offsetY : finalY;
 
     final RenderBox buttonBox =
         clickMeButtonkey.currentContext?.findRenderObject() as RenderBox;
@@ -262,8 +249,7 @@ class _SmileyFaceState extends State<SmileyFace>
     final startY = clickMeOffset.dy;
     final endX = clickMeOffset.dx + buttonSize.width;
     final endY = clickMeOffset.dy + buttonSize.height;
-    final startPosition = Offset(startX, startY);
-    final endPosition = Offset(endX, endY);
+
     if ((x < endX && x > startX) && (y > startY && y < endY)) {
       enterInClickMe = true;
     } else {
@@ -273,40 +259,44 @@ class _SmileyFaceState extends State<SmileyFace>
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      onHover: updateLocation,
-      child: ConstrainedBox(
-        constraints: BoxConstraints.tight(MediaQuery.of(context).size),
+    return Center(
+      child: MouseRegion(
+        onHover: updateLocation,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Stack(
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                  Stack(
+                    alignment: Alignment.center,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          EyesBall(key: eyesBallKey, x: pointerX, y: pointerY),
-                          const SizedBox(
-                            width: 50,
-                          ),
-                          EyesBall(x: pointerX, y: pointerY),
-                        ],
-                      ),
-                      const SizedBox(
-                        height: 50,
-                      ),
                       CustomPaint(
                         painter: Lips(pointerIsAroundButton: enterInClickMe),
                       ),
-                      const SizedBox(
-                        height: 200,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          EyesBall(
+                            key: eyesBallKey,
+                            x: pointerX,
+                            y: pointerY,
+                          ),
+                          const SizedBox(
+                            width: 50,
+                          ),
+                          EyesBall(
+                            x: pointerX,
+                            y: pointerY,
+                          ),
+                        ],
                       ),
                     ],
+                  ),
+                  const SizedBox(
+                    height: 200,
                   ),
                 ],
               ),
@@ -340,51 +330,18 @@ class EyesBall extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Container(
-          height: 60,
-          width: 60,
-          decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.redAccent[700]!, width: 5)),
-        ),
-        AnimatedPointer(
-          pointerOffset: Offset(x, y),
-          radius: 6,
-        ),
-      ],
-    );
-  }
-}
-
-class AnimatedPointer extends StatelessWidget {
-  const AnimatedPointer({
-    Key? key,
-    this.movementDuration = const Duration(milliseconds: 700),
-    this.radius = 30,
-    required this.pointerOffset,
-  }) : super(key: key);
-  final Duration movementDuration;
-  final Offset pointerOffset;
-  final double radius;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedPositioned(
-      duration: movementDuration,
-      curve: Curves.easeOutExpo,
-      top: pointerOffset.dy,
-      left: pointerOffset.dx,
-      child: CustomPaint(
-        painter: Pointer(
-          radius,
-        ),
-        child: const SizedBox(
-          height: 60,
-          width: 60,
-        ),
-      ),
+    return Container(
+      height: 60,
+      width: 60,
+      decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white,
+          border: Border.all(color: Colors.black)),
+      child: Transform.translate(
+          offset: Offset(x, y),
+          child: CustomPaint(
+            painter: Pointer(5),
+          )),
     );
   }
 }
@@ -404,10 +361,14 @@ class Lips extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 10;
 
-    canvas.drawCircle(Offset(0, size.height - 40), 150, smilePaint);
+    final facePaint = Paint()
+      ..color = Colors.yellowAccent
+      ..style = PaintingStyle.fill
+      ..strokeWidth = 5;
+    canvas.drawCircle(const Offset(0, 0), 150, facePaint);
     final paint = Paint()
       ..style = PaintingStyle.fill
-      ..color = Colors.redAccent[700]!;
+      ..color = Colors.black;
     canvas.drawCircle(Offset(size.width / 2, size.height / 2 - 10), 15, paint);
 
     if (pointerIsAroundButton) {
@@ -494,13 +455,13 @@ class Smiley extends CustomPainter {
     double y = size.height / 2;
 
     // drawing nose
-    final Path _path = Path();
-    _path.moveTo(x - 10, y);
-    _path.lineTo(y, y - 20);
-    _path.lineTo(x + 10, y);
-    _path.close();
+    final Path path = Path();
+    path.moveTo(x - 10, y);
+    path.lineTo(y, y - 20);
+    path.lineTo(x + 10, y);
+    path.close();
 
-    canvas.drawPath(_path, _paintDetails);
+    canvas.drawPath(path, _paintDetails);
 
     // drawing smile arc
 
