@@ -352,7 +352,7 @@ class Lips extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     const radius = 50.0;
-    final center = Offset(size.width / 2, size.height / 2 + 30);
+    final center = Offset(size.width / 2, size.height / 2);
 
     // Draw the mouth
     final smilePaint = Paint()
@@ -365,28 +365,35 @@ class Lips extends CustomPainter {
       ..color = Colors.yellowAccent
       ..style = PaintingStyle.fill
       ..strokeWidth = 5;
-    canvas.drawCircle(const Offset(0, 0), 150, facePaint);
-    final paint = Paint()
+    canvas.drawCircle(const Offset(0, 30), 150, facePaint);
+    final nosePaint = Paint()
       ..style = PaintingStyle.fill
       ..color = Colors.black;
-    canvas.drawCircle(Offset(size.width / 2, size.height / 2 - 10), 15, paint);
+    canvas.drawCircle(center.translate(0.0, 60), 15, nosePaint);
 
     if (pointerIsAroundButton) {
-      canvas.drawArc(Rect.fromCircle(center: center, radius: radius / 1.5), 0,
-          3.14, false, smilePaint);
+      canvas.drawArc(
+          Rect.fromCircle(
+              center: center.translate(0.0, 100), radius: radius / 1.5),
+          0,
+          3.14,
+          false,
+          smilePaint);
     } else {
       final paint = Paint()
         ..style = PaintingStyle.fill
         ..strokeCap = StrokeCap.round
         ..color = Colors.redAccent[700]!;
       canvas.drawRect(
-          Rect.fromCenter(center: center, width: 60, height: 10), paint);
+          Rect.fromCenter(
+              center: center.translate(0.0, 100), width: 60, height: 10),
+          paint);
     }
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false;
+    return true;
   }
 }
 
